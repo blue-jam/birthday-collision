@@ -1,4 +1,4 @@
-const SPARQL_ENDPOINT = "https://sparql.crssnky.xyz/imas/query";
+const SPARQL_ENDPOINT = "https://sparql.crssnky.xyz/spql/imas/query";
 
 const query = `
 PREFIX schema: <https://schema.org/>
@@ -11,7 +11,7 @@ SELECT ?name ?birthday WHERE {
   ?idol rdf:type imas-schema:Idol ;
         schema:name ?name ;
         schema:birthDate ?birthday ;
-        imas-schema:Title ?title .
+        imas-schema:title ?title .
   FILTER(CONTAINS(?title, "シンデレラガールズ"))
 }
 `;
