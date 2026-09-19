@@ -5,6 +5,7 @@ const elements = {
   days: $("#days"),
   people: $("#people"),
   trials: $("#trials"),
+  observedPairs: $("#observedPairs"),
   formulaValue: $("#formulaValue"),
   button: $("#runButton"),
   buttonLabel: $("#buttonLabel"),
@@ -14,6 +15,8 @@ const elements = {
   difference: $("#difference"),
   differenceRate: $("#differenceRate"),
   deviation: $("#standardDeviation"),
+  pValue: $("#pValue"),
+  pValueDetail: $("#pValueDetail"),
   caption: $("#resultCaption"),
   results: $("#results"),
   convergence: $("#convergenceChart"),
@@ -38,7 +41,10 @@ function compactNumber(value) {
 function updateFormula() {
   const m = Number(elements.days.value);
   const n = Number(elements.people.value);
-  if (m > 0 && n >= 2) elements.formulaValue.textContent = compactNumber(theoreticalMean(m, n));
+  if (m > 0 && n >= 2) {
+    elements.formulaValue.textContent = compactNumber(theoreticalMean(m, n));
+    elements.observedPairs.max = String((n * (n - 1)) / 2);
+  }
 }
 
 [elements.days, elements.people].forEach((input) => input.addEventListener("input", updateFormula));
@@ -47,12 +53,15 @@ function readInputs() {
   const m = Number(elements.days.value);
   const n = Number(elements.people.value);
   const trials = Number(elements.trials.value);
-  if (![m, n, trials].every(Number.isInteger)) throw new Error("すべて整数で入力してください。");
+  const observed = Number(elements.observedPairs.value);
+  if (![m, n, trials, observed].every(Number.isInteger)) throw new Error("すべて整数で入力してください。");
   if (m < 1 || m > 100000) throw new Error("1年の日数は1〜100,000の範囲で入力してください。");
   if (n < 2 || n > 100000) throw new Error("人数は2〜100,000の範囲で入力してください。");
   if (trials < 1 || trials > 1000000) throw new Error("試行回数は1〜1,000,000の範囲で入力してください。");
+  const maxPairs = (n * (n - 1)) / 2;
+  if (observed < 0 || observed > maxPairs) throw new Error(`実際のペア数は0〜${maxPairs.toLocaleString("ja-JP")}の範囲で入力してください。`);
   if (n * trials > 2e8) throw new Error("人数 × 試行回数は2億以下にしてください。");
-  return { m, n, trials };
+  return { m, n, trials, observed };
 }
 
 function countPairs(m, n, counts, used) {
@@ -68,7 +77,7 @@ function countPairs(m, n, counts, used) {
   return pairs;
 }
 
-async function simulate({ m, n, trials }, currentRun) {
+async function simulate({ m, n, trials, observed }, currentRun) {
   const counts = new Uint32Array(m);
   const used = [];
   const frequencies = new Map();
@@ -95,7 +104,27 @@ async function simulate({ m, n, trials }, currentRun) {
 
   const mean = sum / trials;
   const variance = Math.max(0, sumSquares / trials - mean * mean);
-  return { m, n, trials, theoretical: theoreticalMean(m, n), mean, deviation: Math.sqrt(variance), frequencies, convergence };
+  return { m, n, trials, observed, theoretical: theoreticalMean(m, n), mean, deviation: Math.sqrt(variance), frequencies, convergence };
+}
+
+// Probability-orderingによる両側検定。シミュレーション頻度を各点の確率推定値とする。
+function calculateTwoSidedPValue(frequencies, observed, trials) {
+  const observedFrequency = frequencies.get(observed) || 0;
+  let includedTrials = 0;
+  for (const frequency of frequencies.values()) {
+    if (frequency <= observedFrequency) includedTrials += frequency;
+  }
+  // 有限回のモンテカルロ標本で p=0 と断定しないための add-one 補正。
+  return {
+    value: Math.min(1, (includedTrials + 1) / (trials + 1)),
+    observedFrequency,
+    includedTrials,
+  };
+}
+
+function formatPValue(value, trials) {
+  const digits = Math.min(6, Math.max(4, String(trials).length));
+  return value < 0.0001 ? value.toExponential(2) : value.toFixed(digits);
 }
 
 elements.form.addEventListener("submit", async (event) => {
@@ -127,6 +156,10 @@ function showResult(result) {
   elements.difference.textContent = `${diff >= 0 ? "+" : "−"}${compactNumber(Math.abs(diff))}`;
   elements.differenceRate.textContent = `理論値から ${rate.toFixed(2)}%`;
   elements.deviation.textContent = compactNumber(result.deviation);
+  const p = calculateTwoSidedPValue(result.frequencies, result.observed, result.trials);
+  result.pValueResult = p;
+  elements.pValue.textContent = formatPValue(p.value, result.trials);
+  elements.pValueDetail.textContent = `xobs = ${result.observed.toLocaleString("ja-JP")}（${p.includedTrials.toLocaleString("ja-JP")} / ${result.trials.toLocaleString("ja-JP")} 試行を算入）`;
   elements.caption.textContent = `${result.trials.toLocaleString("ja-JP")}回のランダムな一年を観測`;
   elements.convergenceEmpty.hidden = true;
   elements.distributionEmpty.hidden = true;
@@ -198,7 +231,10 @@ function drawConvergence(result) {
 function drawDistribution(result) {
   const { ctx, width, height } = setupCanvas(elements.distribution);
   const margin = { left: 47, right: 10, top: 18, bottom: 36 };
-  let entries = [...result.frequencies.entries()].sort((a, b) => a[0] - b[0]);
+  const observedFrequency = result.pValueResult.observedFrequency;
+  let entries = [...result.frequencies.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([pairs, count]) => [pairs, count, count <= observedFrequency ? count : 0]);
   const maxBars = Math.max(12, Math.floor((width - margin.left - margin.right) / 8));
   let binSize = 1;
   if (entries.length > maxBars) {
@@ -206,37 +242,53 @@ function drawDistribution(result) {
     binSize = Math.ceil(range / maxBars);
     const binned = new Map();
     const origin = entries[0][0];
-    entries.forEach(([pairs, count]) => {
+    entries.forEach(([pairs, count, included]) => {
       const start = origin + Math.floor((pairs - origin) / binSize) * binSize;
-      binned.set(start, (binned.get(start) || 0) + count);
+      const bin = binned.get(start) || [0, 0];
+      bin[0] += count;
+      bin[1] += included;
+      binned.set(start, bin);
     });
-    entries = [...binned.entries()];
+    entries = [...binned.entries()].map(([start, [count, included]]) => [start, count, included]);
   }
   const maxFrequency = Math.max(...entries.map(([, count]) => count));
   const maxPercent = (maxFrequency / result.trials) * 100;
   const formatPair = (value) => value >= 10000 ? value.toExponential(1) : String(value);
   const first = entries[0][0], last = entries.at(-1)[0];
+  const domainFirst = Math.min(first, result.observed);
+  const domainLast = Math.max(last + binSize - 1, result.observed);
   drawAxes(ctx, width, height, margin,
-    [{ ratio: 0, label: formatPair(first) }, { ratio: .5, label: formatPair(Math.round((first + last) / 2)) }, { ratio: 1, label: formatPair(last + binSize - 1) }],
+    [{ ratio: 0, label: formatPair(domainFirst) }, { ratio: .5, label: formatPair(Math.round((domainFirst + domainLast) / 2)) }, { ratio: 1, label: formatPair(domainLast) }],
     [0, .5, 1].map((ratio) => ({ ratio, label: `${(maxPercent * ratio).toFixed(maxPercent < 10 ? 1 : 0)}%` })));
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
-  const slot = plotW / entries.length;
+  const domainSpan = Math.max(1, domainLast - domainFirst + 1);
+  const slot = plotW * binSize / domainSpan;
   const barW = Math.max(1, slot - Math.min(3, slot * .2));
-  entries.forEach(([, count], index) => {
+  entries.forEach(([pairs, count, included]) => {
     const barH = (count / maxFrequency) * plotH;
-    const x = margin.left + index * slot + (slot - barW) / 2;
+    const x = margin.left + ((pairs - domainFirst) / domainSpan) * plotW + (slot - barW) / 2;
     const y = margin.top + plotH - barH;
     ctx.fillStyle = "#2e73a9";
     ctx.fillRect(x, y, barW, barH);
+    if (included > 0) {
+      const includedH = (included / maxFrequency) * plotH;
+      ctx.fillStyle = "#f06449";
+      ctx.fillRect(x, margin.top + plotH - includedH, barW, includedH);
+    }
   });
   ctx.save();
-  const theoryPosition = (result.theoretical - first) / Math.max(1, last + binSize - first);
+  const theoryPosition = (result.theoretical - domainFirst) / domainSpan;
   if (theoryPosition >= 0 && theoryPosition <= 1) {
     const x = margin.left + theoryPosition * plotW;
     ctx.strokeStyle = "#f06449"; ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, margin.top + plotH); ctx.stroke();
   }
+  ctx.restore();
+  const observedX = margin.left + ((result.observed - domainFirst + .5) / domainSpan) * plotW;
+  ctx.save();
+  ctx.strokeStyle = "#17243b"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(observedX, margin.top); ctx.lineTo(observedX, margin.top + plotH); ctx.stroke();
   ctx.restore();
 }
 

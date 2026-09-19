@@ -52,7 +52,7 @@
           <label class="input-group">
             <span class="input-label">人数 <small>n</small></span>
             <span class="number-input">
-              <input id="people" type="number" min="2" max="100000" value="68" inputmode="numeric" required />
+              <input id="people" type="number" min="2" max="100000" value="190" inputmode="numeric" required />
               <span>人</span>
             </span>
           </label>
@@ -61,6 +61,13 @@
             <span class="number-input">
               <input id="trials" type="number" min="1" max="1000000" value="10000" inputmode="numeric" required />
               <span>回</span>
+            </span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">実際のペア数 <small>x<sub>obs</sub></small></span>
+            <span class="number-input">
+              <input id="observedPairs" type="number" min="0" value="29" inputmode="numeric" required />
+              <span>ペア</span>
             </span>
           </label>
           <button class="run-button" id="runButton" type="submit">
@@ -97,6 +104,11 @@
             <strong id="standardDeviation">—</strong>
             <small>試行ごとのばらつき</small>
           </article>
+          <article class="metric metric-pvalue">
+            <span>両側 p 値</span>
+            <strong id="pValue">—</strong>
+            <small id="pValueDetail">実測ペア数から計算</small>
+          </article>
         </div>
 
         <div class="chart-grid">
@@ -123,7 +135,11 @@
                 <p class="chart-number">B</p>
                 <h3>ペア数の分布</h3>
               </div>
-              <div class="legend"><span><i class="dot blue"></i>観測頻度</span></div>
+              <div class="legend">
+                <span><i class="dot blue"></i>観測頻度</span>
+                <span><i class="dot coral"></i>p 値に算入</span>
+                <span><i class="observed-line"></i>実測値</span>
+              </div>
             </div>
             <div class="canvas-wrap">
               <canvas id="distributionChart" aria-label="ペア数ごとの観測頻度のグラフ"></canvas>
@@ -145,6 +161,11 @@
             <p>
               それぞれのペアを「一致なら1、違えば0」と数え、期待値の線形性を使うと、全ペア数の期待値は
               <code>n(n−1)/2m</code> になります。
+            </p>
+            <p>
+              両側 p 値には、実測値 <code>x<sub>obs</sub></code> と同じかそれ以下の確率でしか現れない、
+              すべてのペア数 <code>x</code> の確率を足します。ここではシミュレーション中の出現頻度から
+              <code>P(X=x)</code> を推定しています。
             </p>
           </div>
         </div>

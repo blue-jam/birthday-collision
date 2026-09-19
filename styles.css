@@ -104,7 +104,7 @@ h2 { margin: 7px 0 0; font-size: 30px; letter-spacing: -.04em; }
 .formula-card strong { grid-column: 2; grid-row: 1 / span 2; font: 500 46px "DM Mono", monospace; color: var(--coral); }
 .formula-card code { grid-column: 1; font: 400 11px "DM Mono", monospace; margin-top: 4px; }
 
-form { display: grid; grid-template-columns: repeat(3, 1fr) 1.25fr; gap: 18px; align-items: end; margin-top: 44px; }
+form { display: grid; grid-template-columns: repeat(4, 1fr) 1.25fr; gap: 18px; align-items: end; margin-top: 44px; }
 .input-group { display: grid; gap: 10px; }
 .input-label { font-size: 12px; font-weight: 600; }
 .input-label small { font: 400 11px "DM Mono", monospace; color: var(--coral); }
@@ -123,13 +123,15 @@ form { display: grid; grid-template-columns: repeat(3, 1fr) 1.25fr; gap: 18px; a
 .results { padding: 76px 0 96px; }
 .section-heading { align-items: end; }
 .section-heading > p { margin: 0; color: var(--muted); font-size: 12px; }
-.metrics { margin: 40px 0 22px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+.metrics { margin: 40px 0 22px; display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); }
 .metric { min-height: 160px; padding: 27px 30px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: rgba(255,255,255,.3); }
 .metric:last-child { border: 0; }
 .metric span, .metric small { font-size: 11px; color: var(--muted); }
 .metric strong { margin: auto 0 2px; font: 500 36px "DM Mono", monospace; letter-spacing: -.06em; }
 .metric-primary { background: var(--coral); color: white; }
 .metric-primary span, .metric-primary small { color: rgba(255,255,255,.75); }
+.metric-pvalue { background: var(--ink); color: white; }
+.metric-pvalue span, .metric-pvalue small { color: rgba(255,255,255,.72); }
 
 .chart-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; }
 .chart-card { min-width: 0; padding: 27px 28px 24px; background: var(--white); border: 1px solid var(--line); }
@@ -142,6 +144,7 @@ form { display: grid; grid-template-columns: repeat(3, 1fr) 1.25fr; gap: 18px; a
 .dot.coral { background: var(--coral); }
 .dot.blue { background: var(--blue); }
 .line-dot { width: 12px; height: 0; border-top: 1px dashed var(--ink); }
+.observed-line { width: 2px; height: 12px; background: var(--ink); }
 .canvas-wrap { height: 320px; position: relative; }
 canvas { width: 100%; height: 100%; display: block; }
 .empty-state { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #a3a5a3; font-size: 12px; line-height: 1.7; }
