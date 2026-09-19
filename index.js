@@ -11,7 +11,9 @@ SELECT ?name ?birthday WHERE {
         schema:birthDate ?birthday ;
         imas:Brand "CinderellaGirls"@en .
   FILTER(LANG(?name) = "ja")
+  FILTER(?name NOT IN ("イム・ユジン"@ja, "リュ・ヘナ"@ja))
 }
+ORDER BY ?birthday ?name
 `;
 
 async function fetchBirthdays() {
@@ -51,6 +53,10 @@ function countBirthdayCollisions(idols) {
 async function main() {
   const idols = await fetchBirthdays();
   console.log(`取得したアイドル数: ${idols.length}`);
+  console.log("取得したアイドル一覧:");
+  for (const idol of idols) {
+    console.log(`- ${idol.name} (${idol.birthday.slice(2)})`);
+  }
 
   const pairs = countBirthdayCollisions(idols);
   console.log(`誕生日が同じアイドルのペア数: ${pairs}`);
