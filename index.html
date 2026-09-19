@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="誕生日が同じ人同士のペア数をモンテカルロ法で確かめるシミュレーター"
+    />
+    <title>Birthday Pair Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <main>
+      <header class="hero">
+        <div class="eyebrow"><span></span> Monte Carlo experiment</div>
+        <h1>Birthday<br /><em>Pair</em> Lab</h1>
+        <p class="hero-copy">
+          同じ誕生日をもつ「ペア」は、平均でいくつ生まれる？<br />
+          ランダムな一年を何度もつくって、理論値への収束を観察します。
+        </p>
+      </header>
+
+      <section class="control-panel" aria-labelledby="settings-title">
+        <div class="panel-heading">
+          <div>
+            <p class="step">01 / SETUP</p>
+            <h2 id="settings-title">実験条件</h2>
+          </div>
+          <div class="formula-card" aria-label="理論上の期待値">
+            <span>理論上の期待値</span>
+            <strong id="formulaValue">6.241</strong>
+            <code>E[X] = n(n − 1) / 2m</code>
+          </div>
+        </div>
+
+        <form id="simulationForm">
+          <label class="input-group">
+            <span class="input-label">1年の日数 <small>m</small></span>
+            <span class="number-input">
+              <input id="days" type="number" min="1" max="100000" value="365" inputmode="numeric" required />
+              <span>日</span>
+            </span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">人数 <small>n</small></span>
+            <span class="number-input">
+              <input id="people" type="number" min="2" max="100000" value="68" inputmode="numeric" required />
+              <span>人</span>
+            </span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">試行回数</span>
+            <span class="number-input">
+              <input id="trials" type="number" min="1" max="1000000" value="10000" inputmode="numeric" required />
+              <span>回</span>
+            </span>
+          </label>
+          <button class="run-button" id="runButton" type="submit">
+            <span id="buttonLabel">シミュレーション開始</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+          </button>
+        </form>
+        <div class="progress-track" aria-hidden="true"><div id="progressBar"></div></div>
+        <p class="error" id="errorMessage" role="alert"></p>
+      </section>
+
+      <section class="results" id="results" aria-labelledby="results-title">
+        <div class="section-heading">
+          <div>
+            <p class="step">02 / RESULTS</p>
+            <h2 id="results-title">観測結果</h2>
+          </div>
+          <p id="resultCaption">10,000回のランダムな一年を観測</p>
+        </div>
+
+        <div class="metrics">
+          <article class="metric metric-primary">
+            <span>シミュレーション平均</span>
+            <strong id="observedMean">—</strong>
+            <small>ペア / 1試行</small>
+          </article>
+          <article class="metric">
+            <span>理論値との差</span>
+            <strong id="difference">—</strong>
+            <small id="differenceRate">実行後に表示</small>
+          </article>
+          <article class="metric">
+            <span>標準偏差</span>
+            <strong id="standardDeviation">—</strong>
+            <small>試行ごとのばらつき</small>
+          </article>
+        </div>
+
+        <div class="chart-grid">
+          <article class="chart-card convergence-card">
+            <div class="chart-header">
+              <div>
+                <p class="chart-number">A</p>
+                <h3>平均値の収束</h3>
+              </div>
+              <div class="legend">
+                <span><i class="dot coral"></i>累積平均</span>
+                <span><i class="line-dot"></i>理論値</span>
+              </div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="convergenceChart" aria-label="試行回数に対する累積平均のグラフ"></canvas>
+              <div class="empty-state" id="convergenceEmpty">実験を開始すると<br />ここに軌跡が現れます</div>
+            </div>
+          </article>
+
+          <article class="chart-card distribution-card">
+            <div class="chart-header">
+              <div>
+                <p class="chart-number">B</p>
+                <h3>ペア数の分布</h3>
+              </div>
+              <div class="legend"><span><i class="dot blue"></i>観測頻度</span></div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="distributionChart" aria-label="ペア数ごとの観測頻度のグラフ"></canvas>
+              <div class="empty-state" id="distributionEmpty">試行ごとのペア数を<br />度数分布で比較します</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="explanation">
+        <p class="step">WHY THIS WORKS</p>
+        <div class="explanation-grid">
+          <h2>すべてのペアに、<br />同じ <em>1/m</em> の可能性。</h2>
+          <div>
+            <p>
+              n人から2人を選ぶ方法は <strong>n(n−1)/2</strong> 通り。どのペアも、誕生日が同じになる確率は
+              <strong>1/m</strong> です。
+            </p>
+            <p>
+              それぞれのペアを「一致なら1、違えば0」と数え、期待値の線形性を使うと、全ペア数の期待値は
+              <code>n(n−1)/2m</code> になります。
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer><span>Birthday Pair Lab</span><span>Randomness, made visible.</span></footer>
+    <script src="app.js"></script>
+  </body>
+</html>
