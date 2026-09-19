@@ -1,18 +1,16 @@
 const SPARQL_ENDPOINT = "https://sparql.crssnky.xyz/spql/imas/query";
 
 const query = `
-PREFIX schema: <https://schema.org/>
-PREFIX imas: <https://sparql.crssnky.xyz/imasrdf/RDFs/detail/>
+PREFIX schema: <http://schema.org/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX imas-schema: <https://sparql.crssnky.xyz/imasrdf/imas-schema.ttl#>
+PREFIX imas: <https://sparql.crssnky.xyz/imasrdf/URIs/imas-schema.ttl#>
 
 SELECT ?name ?birthday WHERE {
-  ?idol rdf:type imas-schema:Idol ;
+  ?idol rdf:type imas:Idol ;
         schema:name ?name ;
         schema:birthDate ?birthday ;
-        imas-schema:title ?title .
-  FILTER(CONTAINS(?title, "シンデレラガールズ"))
+        imas:Brand "CinderellaGirls"@en .
+  FILTER(LANG(?name) = "ja")
 }
 `;
 
@@ -21,7 +19,7 @@ async function fetchBirthdays() {
     SPARQL_ENDPOINT +
     "?query=" +
     encodeURIComponent(query) +
-    "&format=json";
+    "&output=json";
 
   const response = await fetch(url);
   if (!response.ok) {
